@@ -14,17 +14,20 @@
 	$REGEX_NEXT = '/href=\"([^"]+)\" rel=\"next\"/';
 	$REGEX_VIDEO = '/v=([^&"]+)/';
     $REGEX_THUMBNAIL = '/image=([^&"]+)/';
-    $REGEX_SEASON = '/the\-simpsons\-season\-(\d+)/';
+    $REGEX_EPISODE = '/[Ss]eason.\d+.[Ee]pisode.(\d+)/';
+    $REGEX_SEASON = '/[Ss]eason.(\d+).[Ee]pisode.\d+/';
     
     // The page we want to request
-    $current = "http://www.watchcartoononline.com/the-simpsons-episode-101-simpsons-roasting";
-    $current = "http://www.watchcartoononline.com/the-simpsons-season-7-episode-1-who-shot-mr-burns-part-two";
+    //$current = "http://www.watchcartoononline.com/the-simpsons-episode-101-simpsons-roasting";
+    //$current = "http://www.watchcartoononline.com/the-simpsons-season-7-episode-1-who-shot-mr-burns-part-two";
     //$current = "http://www.watchcartoononline.com/the-simpsons-season-8-episode-1-treehouse-of-horror-vii";
     //$current = "http://www.watchcartoononline.com/the-simpsons-season-9-episode-1-%E2%80%93-the-city-of-new-york-vs-homer-simpson";
-    $season = 9;
+    $current = "http://www.watchcartoononline.com/the-simpsons-season-16-episode-1-treehouse-of-horror-xv";
+    $season = 16;
     
     do {
         // Outer loop so that it doesn't stop between seasons
+        $ep = 1;
 
         while (isset($current)) {
             // See if we already have it in our cache (of text files)
@@ -44,9 +47,11 @@
                 // We have the HTML content so we can pick it apart into its component pieces   
                 $video = getMatch($REGEX_VIDEO, $html);
                 $thumbnail = getMatch($REGEX_THUMBNAIL, $html);
+                $episode = getMatch($REGEX_EPISODE, $thumbnail);
+                $season_r = getMatch($REGEX_SEASON, $thumbnail);
                 $next = getMatch($REGEX_NEXT, $html);
                 
-                print "[$current] [$video] [$thumbnail]\n";
+                output($season, $ep, $video, $thumbnail);
                 
                 if ($should_cache) {
                     setCache($current, $html);
@@ -59,6 +64,8 @@
                 // TODO: Should we keep trying in case of timeout or server error?
                 $current = null;
             }  
+            
+            $ep += 1;
         }
 
         // If we've broken out of this loop then that means there is no "next" ... we need to make it up!
@@ -191,6 +198,17 @@
     function lawg($level, $str, $ex = null) {
         if ($level <= Log::DEBUG) {
             print "$str\n";    
+        }
+    }
+    
+    function output($season, $episode, $video, $thumbnail) {
+        $filename = "output_watchcartoononline.txt";
+        try {
+            $fh = fopen($filename, "a");
+            fwrite($fh, "$season\t$episode\thttp://wwwstatic.megavideo.com/mv_player.swf?v=$video\t$thumbnail\n");
+            fclose($fh);
+        } catch (Exception $ex) {
+            lawg(Log::ERR, "ERROR WHILE SETTING CACHE [$filename]", $ex);
         }
     }
     
